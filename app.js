@@ -1,4 +1,4 @@
-const express = requrire("express");
+const express = require("express");
 
 const app = express();
 
