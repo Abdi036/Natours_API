@@ -67,6 +67,7 @@ app.patch("/api/v1/tours/:id", (req, res) => {
   });
 });
 
+// App response
 const port = 8000;
 app.listen(port, () => {
   console.log(`App is running on port ${port}...`);
