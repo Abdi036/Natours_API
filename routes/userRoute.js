@@ -1,48 +1,11 @@
 const express = require("express");
-
-function getAllUsers(req, res) {
-  res.status(500).json({
-    status: "fail",
-    data: {
-      message: "this route is not defined",
-    },
-  });
-}
-function createUser(req, res) {
-  res.status(500).json({
-    status: "fail",
-    data: {
-      message: "this route is not defined",
-    },
-  });
-}
-
-function getUser(req, res) {
-  res.status(500).json({
-    status: "fail",
-    data: {
-      message: "this route is not defined",
-    },
-  });
-}
-
-function updateUser(req, res) {
-  res.status(500).json({
-    status: "fail",
-    data: {
-      message: "this route is not defined",
-    },
-  });
-}
-
-function deleteUser(req, res) {
-  res.status(500).json({
-    status: "fail",
-    data: {
-      message: "this route is not defined",
-    },
-  });
-}
+const {
+  getAllUsers,
+  createUser,
+  getUser,
+  updateUser,
+  deleteUser,
+} = require("./../Controllers/userController");
 
 const router = express.Router();
 
