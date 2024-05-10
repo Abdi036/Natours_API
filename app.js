@@ -1,19 +1,19 @@
 const fs = require("fs");
 const express = require("express");
+const morgan = require("morgan");
 
 const app = express();
+app.use(morgan("dev"));
 app.use(express.json());
-
-// app.get("/", (req, res) => {
-//   res.status(200).json({ message: "Hello from server side!!!" });
-// });
 
 const toursData = JSON.parse(
   fs.readFileSync(`${__dirname}/dev-data/data/tours-simple.json`)
 );
 
+// functions
+
 // get request
-app.get("/api/v1/tours", (req, res) => {
+function getAllTours(req, res) {
   res.status(200).json({
     status: "success",
     results: toursData.length,
@@ -21,10 +21,21 @@ app.get("/api/v1/tours", (req, res) => {
       tours: toursData,
     },
   });
-});
+}
 
-// post request
-app.post("/api/v1/tours", (req, res) => {
+// get request with params/ID
+function getTourById(req, res) {
+  const id = +req.params.id;
+  const tour = toursData.find((el) => el.id === id);
+
+  if (!tour) {
+    return res.status(404).json({ status: "fail", message: "INVALID ID" });
+  }
+  res.status(200).json({ status: "success", data: { tour } });
+}
+
+// post(create)
+function createTour(req, res) {
   const newId = toursData[toursData.length - 1].id + 1;
   const newTour = Object.assign({ id: newId }, req.body);
 
@@ -41,21 +52,10 @@ app.post("/api/v1/tours", (req, res) => {
       });
     }
   );
-});
+}
 
-// get request with params
-app.get("/api/v1/tours/:id", (req, res) => {
-  const id = +req.params.id;
-  const tour = toursData.find((el) => el.id === id);
-
-  if (!tour) {
-    return res.status(404).json({ status: "fail", message: "INVALID ID" });
-  }
-  res.status(200).json({ status: "success", data: { tour } });
-});
-
-// patch(Update)
-app.patch("/api/v1/tours/:id", (req, res) => {
+// patch(update)
+function updateTour(req, res) {
   if (+req.params.id > toursData.length) {
     return res.status(404).json({ status: "fail", message: "INVALID ID" });
   }
@@ -65,10 +65,10 @@ app.patch("/api/v1/tours/:id", (req, res) => {
       tour: "<Updated yeeey>",
     },
   });
-});
+}
 
 // delete
-app.delete("/api/v1/tours/:id", (req, res) => {
+function deleteTour(req, res) {
   if (+req.params.id > toursData.length) {
     return res.status(404).json({ status: "fail", message: "INVALID ID" });
   }
@@ -76,7 +76,21 @@ app.delete("/api/v1/tours/:id", (req, res) => {
     status: "success",
     data: null,
   });
-});
+}
+
+// app.get("/api/v1/tours", getAllTours);
+// app.post("/api/v1/tours", createTour);
+// app.get("/api/v1/tours/:id", getTourById);
+// app.patch("/api/v1/tours/:id", updateTour);
+// app.delete("/api/v1/tours/:id", deleteTour);
+
+// refactored form of the above routes
+app.route("/api/v1/tours").get(getAllTours).post(createTour);
+app
+  .route("/api/v1/tours/:id")
+  .get(getTourById)
+  .patch(updateTour)
+  .delete(deleteTour);
 
 // App response
 const port = 8000;
