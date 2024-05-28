@@ -3,6 +3,16 @@ const toursData = JSON.parse(
   fs.readFileSync(`${__dirname}/../dev-data/data/tours-simple.json`)
 );
 
+exports.checkBody = (req, res, next) => {
+  if (!req.name || !req.price) {
+    return res.status(400).json({
+      status: "fail",
+      message: "There is no Name or Price",
+    });
+  }
+  next();
+};
+
 exports.getAllTours = (req, res) => {
   res.status(200).json({
     status: "success",
