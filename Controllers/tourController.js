@@ -50,25 +50,38 @@ exports.createTour = async (req, res) => {
 };
 
 // patch(update)
-exports.updateTour = (req, res) => {
-  if (+req.params.id > toursData.length) {
-    return res.status(404).json({ status: "fail", message: "INVALID ID" });
+exports.updateTour = async (req, res) => {
+  try {
+    const tour = await TourModel.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    res.status(200).json({
+      status: "success",
+      data: {
+        tour,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: "fail",
+      message: "Fail to update",
+    });
   }
-  res.status(200).json({
-    status: "success",
-    data: {
-      tour: "<Updated yeeey>",
-    },
-  });
 };
 
 // delete
-exports.deleteTour = (req, res) => {
-  if (+req.params.id > toursData.length) {
-    return res.status(404).json({ status: "fail", message: "INVALID ID" });
+exports.deleteTour = async (req, res) => {
+  try {
+    await TourModel.findOneAndDelete(req.params.id);
+    res.status(204).json({
+      status: "success",
+      data: null,
+    });
+  } catch (error) {
+    res.status(404).json({
+      status: "Fail",
+      message: "File not found",
+    });
   }
-  res.status(204).json({
-    status: "success",
-    data: null,
-  });
 };
