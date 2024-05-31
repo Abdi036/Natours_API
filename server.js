@@ -1,6 +1,5 @@
 const dotenv = require("dotenv");
 const mongoose = require("mongoose");
-
 dotenv.config({ path: ".env" });
 
 const app = require("./app");
@@ -10,25 +9,11 @@ const DB = process.env.DATABASE.replace("<password>", process.env.DB_PASSWORD);
 mongoose
   .connect(DB)
   .then(() => {
-    console.log("DB connected");
+    console.log("DB connected successfully.");
   })
   .catch((err) => {
-    console.error("DB connection error:", err);
+    console.error("DB connection Error:", err);
   });
-
-// schema for database
-
-const tourSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, "A tour must have a name"],
-  },
-  rating: Number,
-  price: {
-    type: Number,
-    required: [true, "A tour must have a price"],
-  },
-});
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {

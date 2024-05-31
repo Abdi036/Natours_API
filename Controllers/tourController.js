@@ -1,17 +1,4 @@
-const fs = require("fs");
-const toursData = JSON.parse(
-  fs.readFileSync(`${__dirname}/../dev-data/data/tours-simple.json`)
-);
-
-exports.checkBody = (req, res, next) => {
-  if (!req.name || !req.price) {
-    return res.status(400).json({
-      status: "fail",
-      message: "There is no Name or Price",
-    });
-  }
-  next();
-};
+const TourModel = require("../models/toursModel");
 
 exports.getAllTours = (req, res) => {
   res.status(200).json({
@@ -35,23 +22,21 @@ exports.getTourById = (req, res) => {
 };
 
 // post(create)
-exports.createTour = (req, res) => {
-  const newId = toursData[toursData.length - 1].id + 1;
-  const newTour = Object.assign({ id: newId }, req.body);
-
-  toursData.push(newTour);
-  fs.writeFile(
-    `${__dirname}/dev-data/data/tours-simple.json`,
-    JSON.stringify(toursData),
-    (err) => {
-      res.status(201).json({
-        status: "success",
-        data: {
-          tour: newTour,
-        },
-      });
-    }
-  );
+exports.createTour = async (req, res) => {
+  try {
+    const newTour = await TourModel.create(req.body);
+    res.status(201).json({
+      status: "success",
+      data: {
+        tour: newTour,
+      },
+    });
+  } catch (err) {
+    res.status(400).json({
+      stattus: "fail",
+      message: "Invalid Data",
+    });
+  }
 };
 
 // patch(update)
