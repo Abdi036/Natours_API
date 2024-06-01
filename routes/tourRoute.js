@@ -6,12 +6,15 @@ const {
   updateTour,
   deleteTour,
   topCheap,
+  getTourStats,
 } = require("./../Controllers/tourController");
 
 const router = express.Router();
 
 // addind alies to top-5-cheapest tours
 router.route("/top-5-cheap").get(topCheap, getAllTours);
+
+router.route("/tour-stats").get(getTourStats);
 router.route("/").get(getAllTours).post(createTour);
 router.route("/:id").get(getTourById).patch(updateTour).delete(deleteTour);
 
