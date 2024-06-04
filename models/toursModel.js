@@ -7,6 +7,8 @@ const tourSchema = new mongoose.Schema({
     required: [true, "A tour must have a name"],
     unique: true,
     trim: true,
+    maxlength: [40, "A tour must have less or equal than 40 character"],
+    minlength: [10, "A tour must have more or equal than 10 character"],
   },
   duration: {
     type: Number,
@@ -22,10 +24,16 @@ const tourSchema = new mongoose.Schema({
     type: String,
     trim: true,
     required: [true, "A tour must have a difficulty"],
+    enum: {
+      values: ["easy", "medium", "difficult"],
+      message: "Difficulty is either:easy,medium,difficult",
+    },
   },
   ratingsAverage: {
     type: Number,
     default: 4.5,
+    min: [1, "rating must be above 1.0 "],
+    max: [5, "rating must be below 5.0 "],
   },
   ratingsQuantity: {
     type: Number,
@@ -60,16 +68,12 @@ const tourSchema = new mongoose.Schema({
   },
 });
 
-// Mogoose middleWare
-
 // Query middleWare
-
 tourSchema.pre(/^find/, function (next) {
   this.find({ secreteTour: { $ne: true } });
   this.start = Date.now();
   next();
 });
-
 
 // creating a model
 const TourModel = mongoose.model("Tour", tourSchema);
