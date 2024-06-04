@@ -54,7 +54,23 @@ const tourSchema = new mongoose.Schema({
     default: Date.now(),
   },
   startDates: [Date],
+  secreteTour: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+// Mogoose middleWare
+
+// Query middleWare
+
+tourSchema.pre(/^find/, function (next) {
+  this.find({ secreteTour: { $ne: true } });
+  this.start = Date.now();
+  next();
+});
+
+
 // creating a model
 const TourModel = mongoose.model("Tour", tourSchema);
 
