@@ -1,6 +1,9 @@
 const userModel = require("../models/userModel");
+const jwt = require("jsonwebtoken");
 const { validationResult } = require("express-validator");
 const logger = require("../utils/logger");
+
+require("dotenv").config();
 
 exports.signup = async (req, res) => {
   try {
@@ -14,12 +17,27 @@ exports.signup = async (req, res) => {
       });
     }
 
-    const newUser = await userModel.create(req.body);
+    const newUser = await userModel.create({
+      name: req.body.name,
+      email: req.body.email,
+      password: req.body.password,
+      passwordConfirm: req.body.passwordConfirm,
+    });
+
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    });
 
     res.status(201).json({
       status: "success",
+      token,
       data: {
-        user: newUser,
+        user: {
+          _id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          photo: newUser.photo,
+        },
       },
     });
   } catch (error) {
