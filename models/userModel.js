@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const validator = require("validator");
+const bcrypt = require("bcryptjs");
 
 // creating user schema
 const userScema = new mongoose.Schema({
@@ -20,12 +21,28 @@ const userScema = new mongoose.Schema({
   password: {
     type: String,
     required: [true, "user must have a password"],
-    minLenght: [8, "password shoold be atleast 8 character"],
+    minLenght: [8, "password should be atleast 8 character"],
   },
   passwordConfirm: {
     type: String,
     required: [true, "user must have a password"],
+    validate: {
+      validator: function (el) {
+        return el === this.password;
+      },
+      message: "Passwords are not the same!",
+    },
   },
+});
+
+userScema.pre("save", async function (next) {
+  // runs only if password is modified
+  if (!this.isModified("password")) return next;
+
+  // hashing the password with cost of 12
+  this.password = await bcrypt.hash(this.password, 12);
+  // delete passwordConfirm field
+  this.passwordConfirm = undefined;
 });
 
 // making a model of the schema

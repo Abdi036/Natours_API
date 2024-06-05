@@ -27,10 +27,11 @@ exports.signup = async (req, res) => {
 
     // Handle different types of errors
     if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors).map((el) => el.message);
       res.status(400).json({
         status: "fail",
         message: "Validation error",
-        errors: error.errors,
+        errors,
       });
     } else if (error.name === "MongoError" && error.code === 11000) {
       res.status(409).json({
