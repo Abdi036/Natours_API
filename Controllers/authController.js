@@ -1,8 +1,8 @@
 const userModel = require("../models/userModel");
+const { promisify } = require("util");
 const jwt = require("jsonwebtoken");
 const { validationResult } = require("express-validator");
 const logger = require("../utils/logger");
-const { token } = require("morgan");
 require("dotenv").config();
 
 // reusable function for token
@@ -109,6 +109,59 @@ exports.login = async (req, res, next) => {
     logger.error(`Error during user login: ${error.message}`, { error });
 
     // Handle any other errors
+    res.status(500).json({
+      status: "error",
+      message: "Something went wrong",
+    });
+  }
+};
+
+exports.protectMiddleware = async (req, res, next) => {
+  try {
+    // Getting token and check if it's there
+    let token;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    // console.log(`Here is Your Token :${token}`);
+    if (!token) {
+      return res.status(401).json({
+        status: "fail",
+        message: "You are not logged in! Please log in to get access",
+      });
+    }
+
+    // Verification token
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+    console.log(decoded);
+    // Check if user still exists
+    const currentUser = await userModel.findById(decoded.id);
+    if (!currentUser) {
+      return res.status(401).json({
+        status: "fail",
+        message: "The user belonging to this token no longer exists.",
+      });
+    }
+    // Check if user changed password after the token was issued
+    if (currentUser.changedPasswordAfter(decoded.iat)) {
+      return res.status(401).json({
+        status: "fail",
+        message: "User recently changed password! Please log in again.",
+      });
+    }
+
+    // Grant access to protected route
+    req.user = currentUser;
+    next();
+  } catch (err) {
+    logger.error(`Error during token verification: ${err.message}`, {
+      error: err,
+    });
+
     res.status(500).json({
       status: "error",
       message: "Something went wrong",
