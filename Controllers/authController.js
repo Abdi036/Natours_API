@@ -1,8 +1,11 @@
-const userModel = require("../models/userModel");
-const { promisify } = require("util");
 const jwt = require("jsonwebtoken");
+const { promisify } = require("util");
 const { validationResult } = require("express-validator");
+
+const userModel = require("../models/userModel");
 const logger = require("../utils/logger");
+const User = require("../models/userModel");
+
 require("dotenv").config();
 
 // reusable function for token
@@ -137,7 +140,7 @@ exports.protectMiddleware = async (req, res, next) => {
 
     // Verification token
     const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
-    console.log(decoded);
+
     // Check if user still exists
     const currentUser = await userModel.findById(decoded.id);
     if (!currentUser) {
@@ -146,7 +149,9 @@ exports.protectMiddleware = async (req, res, next) => {
         message: "The user belonging to this token no longer exists.",
       });
     }
+
     // Check if user changed password after the token was issued
+    // iat => issued at
     if (currentUser.changedPasswordAfter(decoded.iat)) {
       return res.status(401).json({
         status: "fail",
@@ -167,4 +172,55 @@ exports.protectMiddleware = async (req, res, next) => {
       message: "Something went wrong",
     });
   }
+};
+
+// Authorization
+//////////////////////////////////////////////////////
+exports.restrictTo = (...roles) => {
+  return (req, res, next) => {
+    try {
+      if (!roles.includes(req.user.role)) {
+        return res.status(403).json({
+          status: "fail",
+          message: "You do not have permission to perform this action",
+        });
+      }
+      next();
+    } catch (err) {
+      logger.error(`Error during role authorization: ${err.message}`, {
+        error: err,
+      });
+
+      res.status(500).json({
+        status: "error",
+        message: "Something went wrong during role authorization",
+      });
+    }
+  };
+};
+
+//////////////////////////////////////////////////
+
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    // 1) Get user based on posted email
+    const user = await User.findOne({ email: req.body.email });
+
+    if (!user) {
+      return res.status(404).json({
+        status: "fail",
+        message: "There is no user with this email address.",
+      });
+    }
+
+    // 2) Generate the random reset token
+    const resetToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+    
+    // Generate the random reset token
+    // send it to the user's email
+  } catch (err) {
+    console.log(err);
+  }
+  next();
 };
