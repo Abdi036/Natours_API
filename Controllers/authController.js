@@ -3,8 +3,9 @@ const { promisify } = require("util");
 const { validationResult } = require("express-validator");
 
 const userModel = require("../models/userModel");
-const logger = require("../utils/logger");
 const User = require("../models/userModel");
+const logger = require("../utils/logger");
+const sendEmail = require("../utils/email");
 
 require("dotenv").config();
 
@@ -214,13 +215,53 @@ exports.forgotPassword = async (req, res, next) => {
     }
 
     // 2) Generate the random reset token
-    const resetToken = user.createPasswordResetToken();
+    const resetToken = await user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
-    
-    // Generate the random reset token
-    // send it to the user's email
+
+    // 3) Construct the reset URL
+    const resetURL = `${req.protocol}://${req.get(
+      "host"
+    )}/api/v1/users/resetPassword/${resetToken}`;
+
+    const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`;
+
+    try {
+      // 4) Send the reset token to the user's email
+      await sendEmail({
+        email: user.email,
+        subject: "Your password reset token (valid for 10 minutes)",
+        message,
+      });
+
+      res.status(200).json({
+        status: "success",
+        message: "Token sent to email!",
+      });
+    } catch (err) {
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      logger.error(`Error sending email: ${err.message}`, { error: err });
+
+      return res.status(500).json({
+        status: "error",
+        message: "There was an error sending the email. Try again later!",
+      });
+    }
   } catch (err) {
-    console.log(err);
+    logger.error(`Error during forgot password: ${err.message}`, {
+      error: err,
+    });
+
+    res.status(500).json({
+      status: "error",
+      message: "Something went wrong",
+    });
   }
+
+  // Only call next() if there are no errors and everything is completed
   next();
 };
+
+exports.resetPassword = (req, res, next) => {};

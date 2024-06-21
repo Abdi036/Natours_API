@@ -88,6 +88,7 @@ userSchema.methods.createPasswordResetToken = async function () {
   this.passswordResetExpires = Date.now() + 10 * 60 * 1000;
 
   console.log(this.passwordResetToken);
+  console.log(resetToken);
   return resetToken;
 };
 // Making a model of the schema
