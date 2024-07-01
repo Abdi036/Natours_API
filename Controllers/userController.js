@@ -1,11 +1,14 @@
+const User = require("./../models/userModel");
 
-exports.getAllUsers = (req, res) => {
-  res.status(500).json({
-    status: "fail",
+exports.getAllUsers = async (req, res) => {
+  const users = await User.find();
+  res.status(200).json({
+    status: "success",
+    result: users.length,
     data: {
-      message: "this route is not defined",
+      users,
     },
-  });
+  }); 
 };
 exports.createUser = (req, res) => {
   res.status(500).json({

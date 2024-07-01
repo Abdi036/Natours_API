@@ -1,8 +1,7 @@
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { promisify } = require("util");
 const { validationResult } = require("express-validator");
-
-const userModel = require("../models/userModel");
 const User = require("../models/userModel");
 const logger = require("../utils/logger");
 const sendEmail = require("../utils/email");
@@ -28,7 +27,7 @@ exports.signup = async (req, res) => {
       });
     }
 
-    const newUser = await userModel.create({
+    const newUser = await User.create({
       name: req.body.name,
       email: req.body.email,
       password: req.body.password,
@@ -74,12 +73,13 @@ exports.signup = async (req, res) => {
     }
   }
 };
+
 // LOGIN AUTHENTICATION
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Validate email and password
+    //1) Validate email and password
     if (!email || !password) {
       return next(
         res.status(400).json({
@@ -89,8 +89,8 @@ exports.login = async (req, res, next) => {
       );
     }
 
-    // Check if user exists in the database
-    const user = await userModel.findOne({ email }).select("+password");
+    //2) Check if user exists in the database
+    const user = await User.findOne({ email }).select("+password");
 
     if (!user || !(await user.correctPassword(password, user.password))) {
       return next(
@@ -101,28 +101,31 @@ exports.login = async (req, res, next) => {
       );
     }
 
-    // Generate JWT
+    //3) Generate JWT
     const token = signToken(user._id);
 
-    // Send response with token
-    res.status(200).json({
-      status: "success",
-      token,
-    });
+    next(
+      res.status(200).json({
+        status: "success",
+        token,
+      })
+    );
   } catch (error) {
     logger.error(`Error during user login: ${error.message}`, { error });
 
     // Handle any other errors
-    res.status(500).json({
-      status: "error",
-      message: "Something went wrong",
-    });
+    next(
+      res.status(500).json({
+        status: "error",
+        message: "Something went wrong",
+      })
+    );
   }
 };
 
 exports.protectMiddleware = async (req, res, next) => {
   try {
-    // Getting token and check if it's there
+    //1) Getting token and check if it's there
     let token;
     if (
       req.headers.authorization &&
@@ -131,36 +134,39 @@ exports.protectMiddleware = async (req, res, next) => {
       token = req.headers.authorization.split(" ")[1];
     }
 
-    // console.log(`Here is Your Token :${token}`);
     if (!token) {
-      return res.status(401).json({
-        status: "fail",
-        message: "You are not logged in! Please log in to get access",
-      });
+      return next(
+        res.status(401).json({
+          status: "fail",
+          message: "You are not logged in! Please login to get access",
+        })
+      );
     }
 
-    // Verification token
+    //2) Verification token
     const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-    // Check if user still exists
-    const currentUser = await userModel.findById(decoded.id);
+    //3) Check if user still exists
+    const currentUser = await User.findById(decoded.id);
     if (!currentUser) {
-      return res.status(401).json({
-        status: "fail",
-        message: "The user belonging to this token no longer exists.",
-      });
+      return next(
+        res.status(401).json({
+          status: "fail",
+          message: "The user belonging to this token no longer exists.",
+        })
+      );
     }
 
-    // Check if user changed password after the token was issued
-    // iat => issued at
+    //4) Check if user changed password after the token was issued
     if (currentUser.changedPasswordAfter(decoded.iat)) {
-      return res.status(401).json({
-        status: "fail",
-        message: "User recently changed password! Please log in again.",
-      });
+      return next(
+        res.status(401).json({
+          status: "fail",
+          message: "User recently changed password! Please log in again.",
+        })
+      );
     }
-
-    // Grant access to protected route
+    //5) Grant access to protected route
     req.user = currentUser;
     next();
   } catch (err) {
@@ -176,7 +182,6 @@ exports.protectMiddleware = async (req, res, next) => {
 };
 
 // Authorization
-//////////////////////////////////////////////////////
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     try {
@@ -199,8 +204,6 @@ exports.restrictTo = (...roles) => {
     }
   };
 };
-
-//////////////////////////////////////////////////
 
 exports.forgotPassword = async (req, res, next) => {
   try {
@@ -259,9 +262,45 @@ exports.forgotPassword = async (req, res, next) => {
       message: "Something went wrong",
     });
   }
-
-  // Only call next() if there are no errors and everything is completed
-  next();
 };
 
-exports.resetPassword = (req, res, next) => {};
+exports.resetPassword = async (req, res, next) => {
+  try {
+    // 1) Get user based on the token
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(req.params.token)
+      .digest("hex");
+
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+    });
+
+    // 2) If token has not expired, and there is user, set the new password
+    if (!user) {
+      return res.status(400).json({
+        status: "fail",
+        message: "Token is invalid or has expired",
+      });
+    }
+    user.password = req.body.password;
+    user.passwordConfirm = req.body.passwordConfirm;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    // 3) Log the user in, send JWT
+    const token = signToken(user._id);
+    res.status(200).json({
+      status: "success",
+      token,
+    });
+  } catch (err) {
+    logger.error(`Error during password reset: ${err.message}`, { error: err });
+    res.status(500).json({
+      status: "error",
+      message: "Something went wrong",
+    });
+  }
+};
