@@ -8,7 +8,7 @@ const sendEmail = require("../utils/email");
 
 require("dotenv").config();
 
-// reusable function for token
+// reusable function for signin token
 function signToken(id) {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
@@ -261,7 +261,7 @@ exports.forgotPassword = async (req, res, next) => {
     });
   }
 };
-////////////////////////////////////////////////////////////////////////
+
 exports.resetPassword = async (req, res, next) => {
   try {
     // 1) Get user based on the token
@@ -299,5 +299,41 @@ exports.resetPassword = async (req, res, next) => {
       status: "error",
       message: "Something went wrong",
     });
+  }
+};
+
+exports.updatePassword = async (req, res, next) => {
+  try {
+    // 1) Get user from collection
+    const user = await User.findById(req.user.id).select("+password");
+
+    // 2) Check if posted current password is correct
+    if (
+      !(await user.correctPassword(req.body.currentPassword, user.password))
+    ) {
+      return res.status(401).json({
+        status: "fail",
+        message: "Your current password is wrong",
+      });
+    }
+
+    // 3) If so, update the password
+    user.password = req.body.password;
+    user.passwordConfirm = req.body.passwordConfirm;
+    await user.save();
+
+    // 4) Log the user in, send JWT
+    const token = signToken(user._id);
+    res.status(200).json({
+      status: "success",
+      token,
+    });
+  } catch (error) {
+    next(
+      res.status(500).json({
+        status: "fail",
+        message: `there was an error updating password ${error}`,
+      })
+    );
   }
 };
