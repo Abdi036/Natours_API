@@ -210,7 +210,6 @@ exports.forgotPassword = async (req, res, next) => {
   try {
     // 1) Get user based on posted email
     const user = await User.findOne({ email: req.body.email });
-
     if (!user) {
       return res.status(404).json({
         status: "fail",
@@ -223,13 +222,13 @@ exports.forgotPassword = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     // 3) Construct the reset URL
-    const resetURL = `${req.protocol}://${req.get(
-      "host"
-    )}/api/v1/users/resetPassword/${resetToken}`;
-
-    const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`;
-
     try {
+      const resetURL = `${req.protocol}://${req.get(
+        "host"
+      )}/api/v1/users/resetPassword/${resetToken}`;
+
+      const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`;
+
       // 4) Send the reset token to the user's email
       await sendEmail({
         email: user.email,
@@ -245,8 +244,6 @@ exports.forgotPassword = async (req, res, next) => {
       user.passwordResetToken = undefined;
       user.passwordResetExpires = undefined;
       await user.save({ validateBeforeSave: false });
-
-      logger.error(`Error sending email: ${err.message}`, { error: err });
 
       return res.status(500).json({
         status: "error",
@@ -264,7 +261,7 @@ exports.forgotPassword = async (req, res, next) => {
     });
   }
 };
-
+////////////////////////////////////////////////////////////////////////
 exports.resetPassword = async (req, res, next) => {
   try {
     // 1) Get user based on the token
@@ -272,13 +269,11 @@ exports.resetPassword = async (req, res, next) => {
       .createHash("sha256")
       .update(req.params.token)
       .digest("hex");
-
     const user = await User.findOne({
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() },
     });
-
-    // 2) If token has not expired, and there is user, set the new password
+    // 2) If token has not expired, and there is a user, set the new password
     if (!user) {
       return res.status(400).json({
         status: "fail",
@@ -293,6 +288,7 @@ exports.resetPassword = async (req, res, next) => {
 
     // 3) Log the user in, send JWT
     const token = signToken(user._id);
+
     res.status(200).json({
       status: "success",
       token,
