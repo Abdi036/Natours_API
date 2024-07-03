@@ -1,13 +1,15 @@
 const express = require("express");
-const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
 const tourRouter = require("./routes/tourRoute");
 const userRouter = require("./routes/userRoute");
 
 const app = express();
 // MIDDLEWARES
+app.use(helmet());
 app.use(morgan("dev"));
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
 app.use(express.static(`${__dirname}/public`));
 
 // Rate limiter middleware
