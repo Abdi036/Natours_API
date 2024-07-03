@@ -22,33 +22,42 @@ exports.getAllUsers = async (req, res) => {
 
 // user update profile
 exports.updateMyprofile = async (req, res, next) => {
-  // 1) Create error if user POSTs password data
-  if (req.body.password || req.body.passwordConfirm) {
-    return next(
-      res.status(400).json({
-        status: "fail",
-        message:
-          "This route is not for updating password please use(/updateMypassword)",
-      })
+  try {
+    // 1) Create error if user POSTs password data
+    if (req.body.password || req.body.passwordConfirm) {
+      return next(
+        res.status(400).json({
+          status: "fail",
+          message:
+            "This route is not for updating password please use(/updateMypassword)",
+        })
+      );
+    }
+
+    // 2) Filtered out unwanted fields names that are not allowed to be updated
+    const filteredBody = filterObj(req.body, "name", "email");
+
+    // 3) Update user document
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      filteredBody,
+      {
+        new: true,
+        runValidators: true,
+      }
     );
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        user: updatedUser,
+      },
+    });
+  } catch (error) {
+    logger.error(`Error during token updateProfile: ${err.message}`, {
+      error: err,
+    });
   }
-
-  // 2) Filtered out unwanted fields names that are not allowed to be updated
-  const filteredBody = filterObj(req.body, "name", "email");
-  // if (req.file) filteredBody.photo = req.file.filename;
-
-  // 3) Update user document
-  const updatedUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {
-    new: true,
-    runValidators: true,
-  });
-
-  res.status(200).json({
-    status: "success",
-    data: {
-      user: updatedUser,
-    },
-  });
 };
 
 exports.createUser = (req, res) => {
@@ -58,6 +67,24 @@ exports.createUser = (req, res) => {
       message: "this route is not defined",
     },
   });
+};
+
+// Delete Profile(Account)
+exports.deleteMyProfile = async (req, res, next) => {
+  try {
+    await User.findByIdAndUpdate(req.user.id, { active: false });
+
+    return next(
+      res.status(204).json({
+        status: "success",
+        data: null,
+      })
+    );
+  } catch (error) {
+    logger.error(`Error during token updateProfile: ${err.message}`, {
+      error: err,
+    });
+  }
 };
 
 exports.getUser = (req, res) => {
