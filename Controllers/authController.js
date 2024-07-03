@@ -50,8 +50,6 @@ exports.signup = async (req, res) => {
       },
     });
   } catch (error) {
-    logger.error(`Error during user signup: ${error.message}`, { error });
-
     // Handle different types of errors
     if (error.name === "ValidationError") {
       const errors = Object.values(error.errors).map((el) => el.message);
@@ -112,8 +110,6 @@ exports.login = async (req, res, next) => {
       })
     );
   } catch (error) {
-    logger.error(`Error during user login: ${error.message}`, { error });
-
     // Handle any other errors
     next(
       res.status(500).json({
@@ -194,10 +190,6 @@ exports.restrictTo = (...roles) => {
       }
       next();
     } catch (err) {
-      logger.error(`Error during role authorization: ${err.message}`, {
-        error: err,
-      });
-
       res.status(500).json({
         status: "error",
         message: "Something went wrong during role authorization",
