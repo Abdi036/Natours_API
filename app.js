@@ -8,7 +8,7 @@ const hpp = require("hpp");
 
 const tourRouter = require("./routes/tourRoute");
 const userRouter = require("./routes/userRoute");
-
+const reviewRouter = require("./routes/reviewRoute");
 const app = express();
 // MIDDLEWARES
 app.use(helmet());
@@ -42,5 +42,6 @@ app.use((req, res, next) => {
 // Routes
 app.use("/api/v1/tours", tourRouter);
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/reviews", reviewRouter);
 
 module.exports = app;
